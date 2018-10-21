@@ -2,13 +2,14 @@
 
 const express = require('express');
 const mongoose = require('mongoose');
-
+const morgan = require('morgan');
 mongoose.Promise = global.Promise;
 
 const { PORT, DATABASE_URL } = require('./config');
 const { BlogPost } = require('./models');
 
 const app = express();
+app.use(morgan('common'));
 app.use(express.json());
 
 app.get('/posts', (req, res) => {
@@ -48,9 +49,8 @@ app.post('/posts', (req, res) => {
     title: req.body.title,
     content: req.body.content,
     author: req.body.author,
-    created: req.body.created
   })
-    .then(post => res.status(201).json(restaurant.serialize()))
+    .then(post => res.status(201).json(post.serialize()))
     .catch(err => {
       console.error(err);
       res.status(500).json({ message: 'Internal server error' });
@@ -58,7 +58,7 @@ app.post('/posts', (req, res) => {
 });
 
 app.put('/posts/:id', (req, res) => {
-  if (!(req.params.id && req.body.id && req.params.id === req.body.id)) {
+  if (!(req.params.id && req.body.id === req.body.id)) {
     const message =
       `Request path id (${req.params.id}) and request body id ` +
       `(${req.body.id}) must match`;
@@ -67,7 +67,7 @@ app.put('/posts/:id', (req, res) => {
   }
 
   const toUpdate = {};
-  const updateableFields = ['title', 'content', 'author', 'created'];
+  const updateableFields = ['title', 'content', 'author'];
 
   updateableFields.forEach(field => {
     if (field in req.body) {
@@ -75,7 +75,7 @@ app.put('/posts/:id', (req, res) => {
     }
   });
 
-  BlogPost.findByIdAndUpdate(req.params.id, { $set: toUpdate })
+  BlogPost.findByIdAndUpdate(req.params.id, { $set: toUpdate }, { new: true })
     .then(post => res.status(204).end())
     .catch(err => res.status(500).json({ message: 'Internal server error' }));
 });
